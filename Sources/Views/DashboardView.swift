@@ -184,7 +184,7 @@ struct DashboardView: View {
                         .frame(maxWidth: .infinity, minHeight: 120)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color(.systemGray4), style: StrokeStyle(lineWidth: 1, lineDash: [5]))
+                                .stroke(Color(.systemGray4), style: StrokeStyle(lineWidth: 1, dash: [5]))
                         )
                         .padding(.horizontal)
                     } else {
