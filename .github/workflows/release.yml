@@ -1,0 +1,57 @@
+name: Build and Release IPA
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Unsigned IPA
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Install XcodeGen
+        run: brew install xcodegen
+        
+      - name: Generate Xcode Project
+        run: xcodegen generate
+        
+      - name: Build App
+        run: |
+          xcodebuild build \
+            -scheme ipa_demo \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build_output \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS=""
+            
+      - name: Package IPA
+        run: |
+          mkdir Payload
+          cp -r build_output/Build/Products/Release-iphoneos/ipa_demo.app Payload/
+          zip -r ipa_demo.ipa Payload
+          
+      - name: Create GitHub Release and Upload Artifact
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG_NAME="manual-build-$(date +'%Y%m%d-%H%M%S')"
+          fi
+          
+          echo "Publishing release for tag: $TAG_NAME"
+          gh release create "$TAG_NAME" ipa_demo.ipa \
+            --title "Release $TAG_NAME" \
+            --notes "这是由 GitHub Actions 自动构建的无签名 (Unsigned) iOS App Demo (.ipa)。你可以使用 TrollStore、AltStore 或 Sideloadly 将其安装到您的 iOS 设备上。"
